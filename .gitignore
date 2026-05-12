@@ -1,6 +1,29 @@
+# Xcode
 DerivedData/
-*.xcuserdata/
 xcuserdata/
+*.xcuserdata/
 *.xcuserstate
-.DS_Store
+*.hmap
+
+# Build products
 build/
+.build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# Carthage
+Carthage/Build/
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# macOS
+.DS_Store
