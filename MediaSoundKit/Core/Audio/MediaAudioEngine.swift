@@ -32,6 +32,8 @@ final class MediaAudioEngine: AudioProcessingControlling {
     private let engine = AVAudioEngine()
     private let playerNode = AVAudioPlayerNode()
     private let bassEQ = AVAudioUnitEQ(numberOfBands: 1)
+    private let bassHarmonicExciterNode = AVAudioUnitDistortion()
+    private let bassMakeupGainNode = AVAudioMixerNode()
     private let graphicEQ = AVAudioUnitEQ(numberOfBands: 6)
     private let preampGainNode = AVAudioMixerNode()
     private let compressorNode = MediaAudioEngine.makeDynamicsProcessorNode()
@@ -121,9 +123,18 @@ final class MediaAudioEngine: AudioProcessingControlling {
         band.filterType = .lowShelf
         band.frequency = configuration.frequency
         band.bandwidth = 0.8
-        band.gain = configuration.isEnabled ? configuration.gain : 0
+        band.gain = configuration.isEnabled ? min(configuration.gain * 0.35, 8) : 0
         band.bypass = !configuration.isEnabled
         bassEQ.globalGain = 0
+
+        let harmonicMix = configuration.isEnabled ? configuration.harmonicIntensity * 6 : 0
+        let preGain = configuration.isEnabled ? -18 + configuration.harmonicIntensity * 6 : -18
+        let makeupGain = configuration.isEnabled ? 1 + configuration.harmonicIntensity * 0.1 : 1
+
+        bassHarmonicExciterNode.preGain = preGain
+        bassHarmonicExciterNode.wetDryMix = harmonicMix
+        bassHarmonicExciterNode.bypass = !configuration.isEnabled
+        bassMakeupGainNode.outputVolume = makeupGain
     }
 
     func updateGraphicEqualizer(_ configuration: GraphicEqualizerConfiguration) {
@@ -171,6 +182,8 @@ private extension MediaAudioEngine {
     func configureAudioGraph() {
         engine.attach(playerNode)
         engine.attach(bassEQ)
+        engine.attach(bassHarmonicExciterNode)
+        engine.attach(bassMakeupGainNode)
         engine.attach(graphicEQ)
         engine.attach(preampGainNode)
         engine.attach(compressorNode)
@@ -179,7 +192,9 @@ private extension MediaAudioEngine {
         engine.attach(volumeBoostNode)
 
         engine.connect(playerNode, to: bassEQ, format: nil)
-        engine.connect(bassEQ, to: graphicEQ, format: nil)
+        engine.connect(bassEQ, to: bassHarmonicExciterNode, format: nil)
+        engine.connect(bassHarmonicExciterNode, to: bassMakeupGainNode, format: nil)
+        engine.connect(bassMakeupGainNode, to: graphicEQ, format: nil)
         engine.connect(graphicEQ, to: preampGainNode, format: nil)
         engine.connect(preampGainNode, to: compressorNode, format: nil)
         engine.connect(compressorNode, to: limiterNode, format: nil)
@@ -187,6 +202,7 @@ private extension MediaAudioEngine {
         engine.connect(softClipperNode, to: volumeBoostNode, format: nil)
         engine.connect(volumeBoostNode, to: engine.mainMixerNode, format: nil)
 
+        configureBassHarmonicExciter()
         configureCompressor()
         configureLimiter()
         configureSoftClipper()
@@ -213,6 +229,14 @@ private extension MediaAudioEngine {
             componentFlagsMask: 0
         )
         return AVAudioUnitEffect(audioComponentDescription: description)
+    }
+
+    func configureBassHarmonicExciter() {
+        bassHarmonicExciterNode.loadFactoryPreset(.drumsLoFi)
+        bassHarmonicExciterNode.preGain = -18
+        bassHarmonicExciterNode.wetDryMix = 0
+        bassHarmonicExciterNode.bypass = true
+        bassMakeupGainNode.outputVolume = 1
     }
 
     func configureCompressor() {

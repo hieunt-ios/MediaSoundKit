@@ -36,17 +36,25 @@ struct BassBoostConfiguration: Equatable {
     var isEnabled: Bool
     var gain: Float
     var frequency: Float
+    var harmonicIntensity: Float
 
     static let disabled = BassBoostConfiguration(
         isEnabled: false,
         gain: 0,
-        frequency: 80
+        frequency: 80,
+        harmonicIntensity: 0
     )
 
-    init(isEnabled: Bool, gain: Float, frequency: Float = 80) {
+    init(
+        isEnabled: Bool,
+        gain: Float,
+        frequency: Float = 80,
+        harmonicIntensity: Float? = nil
+    ) {
         self.isEnabled = isEnabled
         self.gain = min(max(gain, 0), 24)
         self.frequency = min(max(frequency, 40), 250)
+        self.harmonicIntensity = min(max(harmonicIntensity ?? gain / 24, 0), 1)
     }
 }
 
@@ -107,9 +115,9 @@ enum GraphicEqualizerPreset {
         case .acoustic:
             return [3, 2, 1, 2, 3, 4]
         case .bass:
-            return [9, 6, 2, 0, -1, -2]
+            return [5, 3, 1, 0, -1, -1]
         case .hiphop:
-            return [7, 5, 1, 2, 4, 3]
+            return [5, 3, 1, 2, 3, 2]
         }
     }
 
